@@ -1,0 +1,145 @@
+version: "3.8"
+
+services:
+  # ===================================================================
+  # SERVICE 1: PostgreSQL database
+  # -------------------------------------------------------------------
+  # Purpose:
+  #   Stores Paperclip data persistently.
+  # ===================================================================
+  db:
+    image: postgres:17-alpine
+    container_name: paperclip-db
+    restart: unless-stopped
+
+    environment:
+      # Required by postgres image at first startup.
+      POSTGRES_USER: paperclip
+      POSTGRES_PASSWORD: paperclip
+      POSTGRES_DB: paperclip
+
+    volumes:
+      # Named volume for persistent database storage.
+      - pgdata:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U paperclip -d paperclip"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+    networks:
+      - app-network
+
+  # ===================================================================
+  # SERVICE 2: Paperclip AI
+  # -------------------------------------------------------------------
+  # Main application/UI exposed on port 3100.
+  # ===================================================================
+  paperclip:
+    image: reeoss/paperclipai-paperclip:latest
+    container_name: paperclip
+    restart: unless-stopped
+
+    depends_on:
+      - db
+
+    ports:
+      - "3100:3100"
+
+    environment:
+      DATABASE_URL: postgres://paperclip:paperclip@db:5432/paperclip
+      PORT: "3100"
+      HOST: "0.0.0.0"
+      SERVE_UI: "true"
+      PAPERCLIP_DEPLOYMENT_MODE: "authenticated"
+      PAPERCLIP_DEPLOYMENT_EXPOSURE: "private"
+
+      # Leave localhost for now; change later if you decide to expose on LAN/WAN.
+      PAPERCLIP_PUBLIC_URL: "http://localhost:3100"
+
+      # IMPORTANT: replace this with a long random value.
+      BETTER_AUTH_SECRET: "CHANGE_ME_TO_A_LONG_RANDOM_SECRET"
+
+      # =================================================================
+      # API KEYS FOR PAPERCLIP: TWO SUPPORTED OPTIONS
+      # -----------------------------------------------------------------
+      # Option A (inline in this YAML):
+      #   Put your real keys directly in the quotes below.
+      #   Example:
+      #     ANTHROPIC_API_KEY: "sk-ant-..."
+      #     OPENAI_API_KEY: "sk-proj-..."
+      #
+      # Option 2 (.env file in same folder as this compose file):
+      #   1) Create a file named .env
+      #   2) Put:
+      #        ANTHROPIC_API_KEY=sk-ant-...
+      #        OPENAI_API_KEY=sk-proj-...
+      #   3) In YAML, use this exact syntax instead of hardcoded keys:
+      #        ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY:-}"
+      #        OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
+      #
+      # NOTE: This file currently uses Option A placeholders by default.
+      # =================================================================
+      ANTHROPIC_API_KEY: "PASTE_ANTHROPIC_KEY_HERE"
+      OPENAI_API_KEY: "PASTE_OPENAI_KEY_HERE"
+
+    volumes:
+      - paperclip-data:/paperclip
+
+    networks:
+      - app-network
+
+  # ===================================================================
+  # SERVICE 3: OpenClaw
+  # -------------------------------------------------------------------
+  # Uses image defaults for best compatibility in QNAP Container Station.
+  # ===================================================================
+  openclaw:
+    image: ghcr.io/openclaw/openclaw:latest
+    container_name: openclaw
+    restart: unless-stopped
+    init: true
+
+    depends_on:
+      - db
+      - paperclip
+
+    ports:
+      - "18789:18789" # Web UI / API
+      - "18790:18790" # Secondary bridge port
+
+    environment:
+      HOME: /home/node
+      TERM: xterm-256color
+      TZ: "America/New_York"
+      # =================================================================
+      # API KEYS FOR OPENCLAW: SAME TWO OPTIONS AS PAPERCLIP
+      # -----------------------------------------------------------------
+      # Option A (inline in YAML): paste real keys directly in quotes.
+      #
+      # Option 2 (.env file): use variables in YAML exactly like:
+      #   ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY:-}"
+      #   OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
+      #
+      # For consistency, use the same option for paperclip + openclaw.
+      # =================================================================
+      ANTHROPIC_API_KEY: "PASTE_ANTHROPIC_KEY_HERE"
+      OPENAI_API_KEY: "PASTE_OPENAI_KEY_HERE"
+
+    volumes:
+      - openclaw-config:/home/node/.openclaw
+      - openclaw-workspace:/home/node/.openclaw/workspace
+
+    networks:
+      - app-network
+
+volumes:
+  pgdata:
+  paperclip-data:
+  openclaw-config:
+  openclaw-workspace:
+
+networks:
+  app-network:
+    driver: bridge
