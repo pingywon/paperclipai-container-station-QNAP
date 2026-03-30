@@ -1,0 +1,8 @@
+# Local environment overrides / secrets
+.env
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
