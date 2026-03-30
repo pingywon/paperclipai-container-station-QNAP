@@ -1,10 +1,6 @@
-# paperai Docker App Stack for QNAP Container Station
+# PaperclipAI Container Station Stack for QNAP
 
 A beginner-friendly, single-file Docker Compose stack for QNAP NAS Container Station.
-
-> GitHub repository names cannot contain spaces. Use this slug:
-> `paperai-container-station`
-> and keep the human-readable title above in this README.
 
 This stack deploys **three services together**:
 1. **PostgreSQL 17 Alpine** (database)
@@ -24,14 +20,6 @@ This repository is intentionally opinionated for reliability on QNAP:
 
 ---
 
-## Files in this repo
-
-- `docker-compose.yml` — main stack definition
-- `.env.example` — optional env file template (if you later prefer Option A)
-- `.gitignore` — keeps local secrets/files out of Git
-
----
-
 ## Prerequisites
 
 - QNAP NAS with **Container Station** installed
@@ -40,44 +28,21 @@ This repository is intentionally opinionated for reliability on QNAP:
 
 ---
 
-## API keys: two valid methods (choose one)
+## API keys (recommended: inline in `docker-compose.yml`)
 
-You can provide keys to **both Paperclip and OpenClaw** in exactly two ways:
-
-### Option A — inline in `docker-compose.yml`
-
-Put keys directly in YAML:
+For the easiest setup, put keys directly in YAML for **both** services:
 
 ```yaml
 ANTHROPIC_API_KEY: "sk-ant-..."
 OPENAI_API_KEY: "sk-proj-..."
 ```
 
-### Option 2 — `.env` file next to compose file
-
-1. Create `.env` in the same folder as `docker-compose.yml`
-2. Add:
-
-```env
-ANTHROPIC_API_KEY=sk-ant-...
-OPENAI_API_KEY=sk-proj-...
-```
-
-3. In `docker-compose.yml`, use variable syntax:
-
-```yaml
-ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY:-}"
-OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
-```
-
-> Recommendation: use **one method consistently** for both `paperclip` and `openclaw`.
-
 ---
 
-## Quick start (current file defaults to Option A placeholders)
+## Quick start
 
 1. Open `docker-compose.yml`.
-2. Replace these values in **both** `paperclip` and `openclaw` sections (Option A):
+2. Replace these values in **both** `paperclip` and `openclaw` sections:
    - `PASTE_ANTHROPIC_KEY_HERE`
    - `PASTE_OPENAI_KEY_HERE`
 3. Replace this value:
@@ -144,17 +109,6 @@ Verify database env values are exactly:
 
 Change left side of port mappings. Example:
 - `"3101:3100"` (host 3101 to container 3100)
-
----
-
-## Optional: switch to `.env` mode later (Option 2)
-
-If you decide to move secrets out of compose:
-1. Copy `.env.example` to `.env`
-2. Fill values
-3. Replace hardcoded keys in compose with env syntax in **both** services, e.g.:
-   - `ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY:-}"`
-   - `OPENAI_API_KEY: "${OPENAI_API_KEY:-}"`
 
 ---
 
