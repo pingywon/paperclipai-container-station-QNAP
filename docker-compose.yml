@@ -1,5 +1,25 @@
 version: "3.8"
 
+# =====================================================================
+# DNS RESOLUTION TOGGLE (GLOBAL)
+# ---------------------------------------------------------------------
+# ENABLED BY DEFAULT:
+#   All services use Cloudflare + Google public DNS resolvers.
+#
+#   Active servers:
+#     - 1.1.1.1
+#     - 8.8.8.8
+#
+# TO DISABLE CUSTOM DNS:
+#   Replace this block with:
+#     x-dns-settings: &dns_settings {}
+#   (or remove `<<: *dns_settings` from each service)
+# =====================================================================
+x-dns-settings: &dns_settings
+  dns:
+    - 1.1.1.1
+    - 8.8.8.8
+
 services:
   # ===================================================================
   # SERVICE 1: PostgreSQL database
@@ -8,6 +28,7 @@ services:
   #   Stores Paperclip data persistently.
   # ===================================================================
   db:
+    <<: *dns_settings
     image: postgres:17-alpine
     container_name: paperclip-db
     restart: unless-stopped
@@ -37,6 +58,7 @@ services:
   # Main application/UI exposed on port 3100.
   # ===================================================================
   paperclip:
+    <<: *dns_settings
     image: reeoss/paperclipai-paperclip:latest
     container_name: paperclip
     restart: unless-stopped
@@ -84,6 +106,7 @@ services:
   # Uses image defaults for best compatibility in QNAP Container Station.
   # ===================================================================
   openclaw:
+    <<: *dns_settings
     image: ghcr.io/openclaw/openclaw:latest
     container_name: openclaw
     restart: unless-stopped
