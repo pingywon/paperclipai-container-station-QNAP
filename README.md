@@ -23,40 +23,38 @@ This repository is intentionally opinionated for reliability on QNAP:
 
 ---
 
-## Files in this repo
-
-- `docker-compose.yml` — main stack definition
-- `.gitignore` — keeps local secrets/files out of Git
-
----
-
-## Sync this folder to the correct GitHub repo
-
-If you are in this folder and want to sync directly to the correct remote:
-
-```bash
-git init
-git add .
-git commit -m "Initial commit: QNAP PaperclipAI stack"
-git branch -M main
-git remote add origin https://github.com/pingywon/paperclipai-container-station-QNAP.git
-git push -u origin main
-```
-
-If `origin` already exists, update it:
-
-```bash
-git remote set-url origin https://github.com/pingywon/paperclipai-container-station-QNAP.git
-git push -u origin main
-```
-
----
-
 ## Prerequisites
 
 - QNAP NAS with **Container Station** installed
 - Internet access from NAS to pull images
 - At least one AI API key (Anthropic and/or OpenAI)
+
+---
+
+## DNS resolution toggle (enabled by default)
+
+This stack has a global DNS section in `docker-compose.yml` that is **enabled by default** and applies to all three services (`db`, `paperclip`, `openclaw`).
+
+Default DNS servers:
+- `1.1.1.1`
+- `8.8.8.8`
+
+In `docker-compose.yml`, look for:
+
+```yaml
+x-dns-settings: &dns_settings
+  dns:
+    - 1.1.1.1
+    - 8.8.8.8
+```
+
+To disable custom DNS, replace that block with:
+
+```yaml
+x-dns-settings: &dns_settings {}
+```
+
+(Alternative: remove `<<: *dns_settings` from each service.)
 
 ---
 
