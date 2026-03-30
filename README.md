@@ -2,6 +2,9 @@
 
 A beginner-friendly, single-file Docker Compose stack for QNAP NAS Container Station.
 
+Official target GitHub repository:
+`https://github.com/pingywon/paperclipai-container-station-QNAP`
+
 This stack deploys **three services together**:
 1. **PostgreSQL 17 Alpine** (database)
 2. **Paperclip AI** (app/UI)
@@ -17,6 +20,35 @@ This repository is intentionally opinionated for reliability on QNAP:
 - Uses simple `depends_on` ordering
 - Avoids custom OpenClaw startup command overrides (common crash-loop trigger)
 - Keeps setup steps minimal for new users
+
+---
+
+## Files in this repo
+
+- `docker-compose.yml` — main stack definition
+- `.gitignore` — keeps local secrets/files out of Git
+
+---
+
+## Sync this folder to the correct GitHub repo
+
+If you are in this folder and want to sync directly to the correct remote:
+
+```bash
+git init
+git add .
+git commit -m "Initial commit: QNAP PaperclipAI stack"
+git branch -M main
+git remote add origin https://github.com/pingywon/paperclipai-container-station-QNAP.git
+git push -u origin main
+```
+
+If `origin` already exists, update it:
+
+```bash
+git remote set-url origin https://github.com/pingywon/paperclipai-container-station-QNAP.git
+git push -u origin main
+```
 
 ---
 
@@ -97,6 +129,22 @@ Try:
 1. Stop stack
 2. Start stack again
 3. If still failing, inspect first error line in logs
+
+
+### 4) OpenClaw "EACCES: permission denied" on QNAP
+
+If logs show errors like:
+- `EACCES: permission denied, open '/home/node/.openclaw/...tmp'`
+
+Cause: QNAP can create mounted volumes with ownership that the default OpenClaw runtime user cannot write to.
+
+This compose file now sets:
+- `user: "0:0"` for the `openclaw` service
+
+If you deployed before this fix, do this once:
+1. Stop the stack
+2. Remove/recreate `openclaw-config` and `openclaw-workspace` volumes
+3. Redeploy the stack
 
 ### 2) Paperclip can't connect to database
 
