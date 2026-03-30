@@ -155,27 +155,3 @@ Verify database env values are exactly:
 
 Change left side of port mappings. Example:
 - `"3101:3100"` (host 3101 to container 3100)
-
----
-
-## Can this assistant create the GitHub repo too?
-
-Yes, I can scaffold everything and prepare it for push.
-Creating the remote GitHub repo directly depends on your authentication/access in this environment.
-
-Typical manual commands (from your machine) are:
-
-```bash
-git init
-git add .
-git commit -m "Initial commit: QNAP Paperclip/Postgres/OpenClaw stack"
-git branch -M main
-git remote add origin https://github.com/<your-user>/<your-repo>.git
-git push -u origin main
-```
-
-If you use GitHub CLI and are authenticated:
-
-```bash
-gh repo create <your-repo> --public --source=. --remote=origin --push
-```
