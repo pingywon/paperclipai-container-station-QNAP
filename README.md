@@ -81,6 +81,8 @@ OPENAI_API_KEY: "sk-proj-..."
 5. Keep `HOST` as:
    - `HOST: "0.0.0.0"`
 6. Deploy the compose stack in Container Station.
+7. If you get a hostname-allowed error on first login, run:
+   - `docker exec -it paperclip pnpm paperclipai allowed-hostname <QNAP_HOST_OR_IP>`
 
 ---
 
@@ -181,3 +183,28 @@ PAPERCLIP_PUBLIC_URL: "http://<QNAP_HOST_OR_IP>:3100"
 Rule of thumb:
 - `HOST` = where the app listens **inside the container**
 - `PAPERCLIP_PUBLIC_URL` = what users type in browser **on LAN**
+
+
+### 6) `Hostname "<IP_OR_NAME>" is not allowed for this Paperclip instance`
+
+If you see an error like:
+- `Hostname '192.168.13.13' is not allowed for this Paperclip instance`
+
+Add the LAN hostname/IP to Paperclip's allowed-hostname list inside the running container:
+
+```bash
+docker exec -it paperclip pnpm paperclipai allowed-hostname 192.168.13.13
+```
+
+If users access Paperclip via multiple names, add each one (examples):
+
+```bash
+docker exec -it paperclip pnpm paperclipai allowed-hostname qnap.local
+docker exec -it paperclip pnpm paperclipai allowed-hostname paperclip.local
+```
+
+Then restart the `paperclip` container.
+
+Tip:
+- Prefer one canonical URL in `PAPERCLIP_PUBLIC_URL` and have all users use that same URL.
+
