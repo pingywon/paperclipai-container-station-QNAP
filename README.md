@@ -2,10 +2,9 @@
 
 A beginner-friendly, single-file Docker Compose stack for QNAP NAS Container Station.
 
-Official target GitHub repository:
-`https://github.com/pingywon/paperclipai-container-station-QNAP`
+Official GitHub repository: <https://github.com/pingywon/paperclipai-container-station-QNAP>
 
-This stack deploys **three services together**:
+This stack deploys three services together:
 1. **PostgreSQL 17 Alpine** (database)
 2. **Paperclip AI** (app/UI)
 3. **OpenClaw** (gateway/service)
@@ -33,7 +32,7 @@ This repository is intentionally opinionated for reliability on QNAP:
 
 ## DNS resolution toggle (enabled by default)
 
-This stack has a global DNS section in `docker-compose.yml` that is **enabled by default** and applies to all three services (`db`, `paperclip`, `openclaw`).
+This stack has a global DNS section in `docker-compose.yml` that is enabled by default and applies to all three services (`db`, `paperclip`, `openclaw`).
 
 Default DNS servers:
 - `1.1.1.1`
@@ -77,9 +76,13 @@ OPENAI_API_KEY: "sk-proj-..."
    - `PASTE_OPENAI_KEY_HERE`
 3. Replace this value:
    - `BETTER_AUTH_SECRET: "CHANGE_ME_TO_A_LONG_RANDOM_SECRET"`
-4. Keep this as-is for now (per your preference):
-   - `PAPERCLIP_PUBLIC_URL: "http://localhost:3100"`
-5. Deploy the compose stack in Container Station.
+4. Set `PAPERCLIP_PUBLIC_URL` to the NAS LAN URL users will open in a browser, for example:
+   - `PAPERCLIP_PUBLIC_URL: "http://192.168.1.50:3100"`
+5. Keep `HOST` as:
+   - `HOST: "0.0.0.0"`
+6. Deploy the compose stack in Container Station.
+7. Run onboarding from NAS SSH after first start:
+   - `docker exec -it paperclip env COREPACK_ENABLE_DOWNLOAD_PROMPT=0 pnpm paperclipai onboard`
 
 ---
 
@@ -88,7 +91,17 @@ OPENAI_API_KEY: "sk-proj-..."
 - Paperclip: `http://<QNAP_HOST_OR_IP>:3100`
 - OpenClaw: `http://<QNAP_HOST_OR_IP>:18789`
 
-If using the NAS itself locally, `localhost` may work from the NAS shell.
+`localhost` may work from the NAS itself, but other LAN devices must use the NAS IP/hostname URL.
+
+## QNAP Container Station networking (important)
+
+In Container Station, keep all three containers (`db`, `paperclip`, `openclaw`) attached to the same internal virtual network so they can talk to each other.
+
+If you also want LAN access directly on a VLAN/static IP, add a second virtual network adapter for each container.
+- Adapter 1: shared internal/app network (container-to-container traffic)
+- Adapter 2: LAN/VLAN-facing network (client access)
+
+If containers are only attached to separate per-container LAN adapters, `paperclip` ↔ `db` / `openclaw` communication can fail.
 
 ---
 
@@ -108,7 +121,7 @@ This matches EST/EDT for New York.
 
 - Do **not** commit real API keys to public GitHub repos.
 - Rotate any key that was ever pasted into chat, logs, screenshots, or public files.
-- Use strong random `BETTER_AUTH_SECRET` (32+ chars recommended).
+- Use a strong random `BETTER_AUTH_SECRET` (32+ chars recommended).
 
 ---
 
@@ -128,22 +141,6 @@ Try:
 2. Start stack again
 3. If still failing, inspect first error line in logs
 
-
-### 4) OpenClaw "EACCES: permission denied" on QNAP
-
-If logs show errors like:
-- `EACCES: permission denied, open '/home/node/.openclaw/...tmp'`
-
-Cause: QNAP can create mounted volumes with ownership that the default OpenClaw runtime user cannot write to.
-
-This compose file now sets:
-- `user: "0:0"` for the `openclaw` service
-
-If you deployed before this fix, do this once:
-1. Stop the stack
-2. Remove/recreate `openclaw-config` and `openclaw-workspace` volumes
-3. Redeploy the stack
-
 ### 2) Paperclip can't connect to database
 
 Verify database env values are exactly:
@@ -155,3 +152,71 @@ Verify database env values are exactly:
 
 Change left side of port mappings. Example:
 - `"3101:3100"` (host 3101 to container 3100)
+
+### 4) OpenClaw `EACCES: permission denied` on QNAP
+
+If logs show errors like:
+- `EACCES: permission denied, open '/home/node/.openclaw/...tmp'`
+
+Cause: QNAP can create mounted volumes with ownership that the default OpenClaw runtime user cannot write to.
+
+This compose file sets:
+- `user: "0:0"` for the `openclaw` service
+
+If you deployed before this fix, do this once:
+1. Stop the stack
+2. Remove/recreate `openclaw-config` and `openclaw-workspace` volumes
+3. Redeploy the stack
+
+### 5) `EADDRNOTAVAIL` when Paperclip starts
+
+If logs show errors like:
+- `listen EADDRNOTAVAIL: address not available 192.168.13.13:3100`
+
+Cause: Paperclip is trying to bind to an IP that does not exist inside the container network namespace.
+
+Fix:
+1. Keep `HOST: "0.0.0.0"` (bind all interfaces in the container).
+2. Do **not** set `HOST` to your NAS/VLAN IP (for example `192.168.x.x`).
+3. Set `PAPERCLIP_PUBLIC_URL` to the NAS URL clients open (for example `http://192.168.13.13:3100`).
+4. Ensure the compose port mapping remains `"3100:3100"`.
+5. In QNAP Container Station, check **Environment** and remove any extra `HOST=192.168...` override that may have been added manually.
+6. Fully recreate/redeploy the `paperclip` container after env changes (stop + delete container, then deploy again) so old env values are not reused.
+
+Known-good `paperclip` env baseline:
+```yaml
+PORT: "3100"
+HOST: "0.0.0.0"
+PAPERCLIP_PUBLIC_URL: "http://<QNAP_HOST_OR_IP>:3100"
+```
+
+Rule of thumb:
+- `HOST` = where the app listens **inside the container**
+- `PAPERCLIP_PUBLIC_URL` = what users type in browser **on LAN**
+
+
+### 6) `Hostname "<IP_OR_NAME>" is not allowed for this Paperclip instance`
+
+If you see an error like:
+- `Hostname '192.168.13.13' is not allowed for this Paperclip instance`
+
+Add the LAN hostname/IP to Paperclip's allowed-hostname list inside the running container:
+
+```bash
+docker exec -it paperclip pnpm paperclipai allowed-hostname 192.168.13.13
+```
+
+If users access Paperclip via multiple names, add each one (examples):
+
+```bash
+docker exec -it paperclip pnpm paperclipai allowed-hostname qnap.local
+docker exec -it paperclip pnpm paperclipai allowed-hostname paperclip.local
+```
+
+Then restart the `paperclip` container.
+
+Tip:
+- Prefer one canonical URL in `PAPERCLIP_PUBLIC_URL` and have all users use that same URL.
+- If Paperclip is still stuck before onboarding, run from NAS SSH:
+  - `docker exec -it paperclip env COREPACK_ENABLE_DOWNLOAD_PROMPT=0 pnpm paperclipai onboard`
+
