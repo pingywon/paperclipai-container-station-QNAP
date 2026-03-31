@@ -3,3 +3,4 @@
 
 # Logs
 *.log
+scripts/allow-paperclip-hostnames.sh
