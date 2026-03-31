@@ -81,8 +81,8 @@ OPENAI_API_KEY: "sk-proj-..."
 5. Keep `HOST` as:
    - `HOST: "0.0.0.0"`
 6. Deploy the compose stack in Container Station.
-7. If you get a hostname-allowed error on first login, run:
-   - `./scripts/allow-paperclip-hostnames.sh <QNAP_HOST_OR_IP>`
+7. Run onboarding from NAS SSH after first start:
+   - `docker exec -it paperclip env COREPACK_ENABLE_DOWNLOAD_PROMPT=0 pnpm paperclipai onboard`
 
 ---
 
@@ -93,8 +93,15 @@ OPENAI_API_KEY: "sk-proj-..."
 
 `localhost` may work from the NAS itself, but other LAN devices must use the NAS IP/hostname URL.
 
-Important for QNAP Container Station: this stack uses Docker bridge networking + published ports.
-Use the **NAS IP/hostname** for access, not a container-internal IP.
+## QNAP Container Station networking (important)
+
+In Container Station, keep all three containers (`db`, `paperclip`, `openclaw`) attached to the same internal virtual network so they can talk to each other.
+
+If you also want LAN access directly on a VLAN/static IP, add a second virtual network adapter for each container.
+- Adapter 1: shared internal/app network (container-to-container traffic)
+- Adapter 2: LAN/VLAN-facing network (client access)
+
+If containers are only attached to separate per-container LAN adapters, `paperclip` ↔ `db` / `openclaw` communication can fail.
 
 ---
 
@@ -206,29 +213,10 @@ docker exec -it paperclip pnpm paperclipai allowed-hostname qnap.local
 docker exec -it paperclip pnpm paperclipai allowed-hostname paperclip.local
 ```
 
-Then restart the `paperclip` container (the helper script below does this automatically).
-
-Helper script in this repo:
-```bash
-./scripts/allow-paperclip-hostnames.sh 192.168.13.13
-./scripts/allow-paperclip-hostnames.sh qnap.local paperclip.local 192.168.13.13
-```
+Then restart the `paperclip` container.
 
 Tip:
 - Prefer one canonical URL in `PAPERCLIP_PUBLIC_URL` and have all users use that same URL.
-
-
-
-### 7) Cannot ping/connect to `192.168.x.x` container IP on QNAP
-
-If you assigned a static/container IP and cannot ping it, this is expected in many QNAP bridge setups.
-
-Use this model instead:
-1. Keep the stack on default bridge networking.
-2. Keep compose ports published (for example `"3100:3100"`).
-3. Connect clients to the **NAS IP** (example `http://<NAS_IP>:3100`).
-
-Do **not** troubleshoot Paperclip reachability by pinging container IP first; verify TCP access to the NAS published port instead.
-
-If you must use a dedicated VLAN/IP per container, use a QNAP network mode that supports routable MACVLAN/IPAM and ensure your switch/router allows that segment.
+- If Paperclip is still stuck before onboarding, run from NAS SSH:
+  - `docker exec -it paperclip env COREPACK_ENABLE_DOWNLOAD_PROMPT=0 pnpm paperclipai onboard`
 
