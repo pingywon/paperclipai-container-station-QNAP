@@ -168,6 +168,15 @@ Fix:
 2. Do **not** set `HOST` to your NAS/VLAN IP (for example `192.168.x.x`).
 3. Set `PAPERCLIP_PUBLIC_URL` to the NAS URL clients open (for example `http://192.168.13.13:3100`).
 4. Ensure the compose port mapping remains `"3100:3100"`.
+5. In QNAP Container Station, check **Environment** and remove any extra `HOST=192.168...` override that may have been added manually.
+6. Fully recreate/redeploy the `paperclip` container after env changes (stop + delete container, then deploy again) so old env values are not reused.
+
+Known-good `paperclip` env baseline:
+```yaml
+PORT: "3100"
+HOST: "0.0.0.0"
+PAPERCLIP_PUBLIC_URL: "http://<QNAP_HOST_OR_IP>:3100"
+```
 
 Rule of thumb:
 - `HOST` = where the app listens **inside the container**
